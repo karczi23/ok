@@ -23,7 +23,7 @@ class GraphColoring:
 
     def get_smallest_color(self, num):
         colors = self.graph_colors[num]
-        color = 0
+        color = 1
         while color in colors:
             color += 1
         return color
@@ -75,19 +75,20 @@ class GraphColoring:
     def crossover(self, parent1, parent2):
     # def crossover(self):
         # print(("start", parent1, parent2))
-        permutation = np.zeros(self.length, dtype=int)
+        permutation = np.zeros(self.length, dtype=np.uint16)
         # print(parent2)
-        parent2 = np.array(parent2[1])
         # parent1 = list(np.permutation(23))
         # parent2 = np.permutation(23)
         # print(parent1)
         position_to_swap = random.randrange(0, self.length)
+        np_parent1 = np.array(parent1[1][:position_to_swap])
+        np_parent2 = np.array(parent2[1])
         # np_parent1 = np.zeros(position_to_swap)
         # np_parent2 = np.zeros(self.length - position_to_swap)
         for i in range(position_to_swap):
             permutation[i] = parent1[1][i]
         # permutation = np.array(parent1[1][:position_to_swap])
-        np_parent2 = parent2[~np.isin(parent2, permutation)]
+        np_parent2 = np_parent2[~np.isin(parent2[1], np_parent1)]
         # print((parent2, np_parent2))
         # for i in range(self.length - position_to_swap):
         #     np_parent2[i] = parent2[i]
@@ -95,8 +96,9 @@ class GraphColoring:
         # parent2 = list(setdiff1d(parent2.copy(), permutation))
         # print(parent2)
         i = 0
+        # print((position_to_swap,len(np_parent2), self.length, parent1,  permutation, np_parent2))
         for k in range(position_to_swap, self.length):
-            permutation[k] = parent2[i]
+            permutation[k] = np_parent2[i]
             i += 1
         # permutation.extend(list(parent2))
         # print(permutation)
@@ -137,7 +139,13 @@ class GraphColoring:
             return min([self.parents_half[p1], self.parents_half[p2], child], key=lambda x : x[0])
     
     def run_in_parallel(self, parents, executor):
+        # print(len(parents))
         new_pop = executor.map(self.changes, parents)
+        print("po popie")
+        # i = 0
+        # for _ in new_pop:
+        #     i += 1
+        # print(i)
         return np.fromiter(new_pop, dtype=object)
     
     def run(self):
@@ -152,9 +160,10 @@ class GraphColoring:
                 print("g")
                 g += 1
                 population = self.evolve(population, executor)
+                # print(population)
                 best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                                 key=lambda x: x[0])
-                # print(best_individual)
+                print(best_individual)
 
         best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                             key=lambda x: x[0])

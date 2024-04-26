@@ -1,6 +1,5 @@
 from itertools import repeat, count, filterfalse
-from numpy import random as np
-from numpy import isin, array
+import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import random
 import time
@@ -12,30 +11,39 @@ graph_colors = []
 class GraphColoring:
     def __init__(self, graph_data, size=100, mutation_rate=0.05, crossover_rate=0.5, time_to_run=300) -> None:
         self.length = graph_data[0]
-        self.graph = graph_data[1]
-        self.graph_colors = []
+        self.graph = np.array(graph_data[1], dtype=int)
+        self.graph_colors = np.zeros((self.length, self.length))
         self.size = size
         self.mutation_rate = mutation_rate
         self.crossover_rate = crossover_rate
         self.time_to_run = time.time() + time_to_run
         self.time_to_run_greedy = []
 
+        self.colors_matrix = np.zeros(self.length)
+
+    def get_smallest_color(self, num):
+        colors = self.graph_colors[num]
+        color = 0
+        while color in colors:
+            color += 1
+        return color
+
     def greedy(self, permutation):
         colors_used = 0
         start = time.time()
         # permutation = list(random.permutation(number))
         # permutation = [i for i in range(number)]
-        number = len(permutation)
-        self.graph_colors = eye_matrix(number)
+        # number = len(permutation)
+        self.graph_colors = eye_matrix(self.length)
         for num in permutation:
             # print(num)
             # print(graph[num])
             # print(graph_colors[num])
             # print()
-            color = next(filterfalse(set(self.graph_colors[num]).__contains__, count(1)))
+            color = self.get_smallest_color(num)
             if color > colors_used:
                 colors_used = color
-            for line in range(number):
+            for line in range(self.length):
                 self.graph_colors[line][num] = color if self.graph[line][num] == 1 else 0
         # print(colors_used)
                 
@@ -44,13 +52,13 @@ class GraphColoring:
         return colors_used, permutation
 # read_graph()
     def generate_individual(self):
-        permutation = list(np.permutation(self.length))
+        permutation = np.random.permutation(self.length)
         return self.greedy(permutation)
 
     def generate_population(self):
-        population = []
-        for _ in range(self.size):
-            population.append(self.generate_individual())
+        population = np.empty(self.size, dtype=object)
+        for i in range(self.size):
+            population[i] = self.generate_individual()
         return population
     
     def mutate(self, individual):
@@ -66,18 +74,33 @@ class GraphColoring:
     
     def crossover(self, parent1, parent2):
     # def crossover(self):
-        permutation = []
+        # print(("start", parent1, parent2))
+        permutation = np.zeros(self.length, dtype=int)
         # print(parent2)
-        parent2 = array(parent2[1])
+        parent2 = np.array(parent2[1])
         # parent1 = list(np.permutation(23))
         # parent2 = np.permutation(23)
         # print(parent1)
         position_to_swap = random.randrange(0, self.length)
-        permutation = parent1[1].copy()[:position_to_swap]
+        # np_parent1 = np.zeros(position_to_swap)
+        # np_parent2 = np.zeros(self.length - position_to_swap)
+        for i in range(position_to_swap):
+            permutation[i] = parent1[1][i]
+        # permutation = np.array(parent1[1][:position_to_swap])
+        np_parent2 = parent2[~np.isin(parent2, permutation)]
+        # print((parent2, np_parent2))
+        # for i in range(self.length - position_to_swap):
+        #     np_parent2[i] = parent2[i]
+        # permutation = parent1[1].copy()[:position_to_swap]
         # parent2 = list(setdiff1d(parent2.copy(), permutation))
-        parent2 = parent2[~isin(parent2, permutation)]
-        permutation.extend(list(parent2))
+        # print(parent2)
+        i = 0
+        for k in range(position_to_swap, self.length):
+            permutation[k] = parent2[i]
+            i += 1
+        # permutation.extend(list(parent2))
         # print(permutation)
+        # print((parent1[1], parent2, permutation))
         # for node in range(self.length):
         #     if random.random() < self.crossover_rate:
         #         permutation.append(parent1[1][node])
@@ -115,10 +138,11 @@ class GraphColoring:
     
     def run_in_parallel(self, parents, executor):
         new_pop = executor.map(self.changes, parents)
-        return list(new_pop)
+        return np.fromiter(new_pop, dtype=object)
     
     def run(self):
         population = self.generate_population()
+        # print(population)
         g = 0
         best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                             key=lambda x: x[0])
@@ -130,7 +154,7 @@ class GraphColoring:
                 population = self.evolve(population, executor)
                 best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                                 key=lambda x: x[0])
-                print(best_individual)
+                # print(best_individual)
 
         best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                             key=lambda x: x[0])
@@ -158,10 +182,7 @@ def read_graph():
         # return greedy(length)
 
 def eye_matrix(number):
-    data = []
-    for _ in range(number):
-        data.append(list(repeat(0, number)))
-    return data
+    return np.zeros((number, number))
 
 alg = GraphColoring(read_graph())
 # colors, _ = alg.greedy([i for i in range(36)])

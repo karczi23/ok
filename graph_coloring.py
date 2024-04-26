@@ -40,7 +40,7 @@ class GraphColoring:
             # print(graph[num])
             # print(graph_colors[num])
             # print()
-            color = self.get_smallest_color(num)
+            color = next(filterfalse(set(self.graph_colors[num]).__contains__, count(1)))
             if color > colors_used:
                 colors_used = color
             for line in range(self.length):

@@ -5,9 +5,6 @@ import random
 import time
 from statistics import fmean
 
-graph = []
-graph_colors = []
-
 class GraphColoring:
     def __init__(self, graph_data, size=100, mutation_rate=0.05, crossover_rate=0.5, time_to_run=300) -> None:
         self.length = graph_data[0]

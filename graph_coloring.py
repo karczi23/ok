@@ -1,4 +1,4 @@
-from itertools import repeat, count, filterfalse
+from itertools import count, filterfalse
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import random
@@ -108,7 +108,7 @@ class GraphColoring:
         return permutation
     
     def evolve(self, population, executor):
-        new_population = []
+        # new_population = []
         fitness_scores = [(individual[0], individual[1]) for individual in population]
         fitness_scores.sort(key=lambda x : x[0])
         # for fit in fitness_scores:
@@ -117,15 +117,21 @@ class GraphColoring:
         self.parents_half = fitness_scores[:(self.length // 2)]
 
         parents_list = []
-        for _ in range(self.size):
+        for _ in range(int(self.size * 0.97)):
             # parents = random.sample(parents_half, 2)
             p1 = random.randint(0, len(self.parents_half) - 1)
             p2 = random.randint(0, len(self.parents_half) - 1)
             parents_list.append((p1, p2))
 
+
+        new_population = self.run_in_parallel(parents_list, executor)
+
+        old_pop = self.size - len(parents_list)
+        for i in range(old_pop):
+            new_population[self.size - 1 - i] = fitness_scores[i]
         # print(parents_list)
         # print(len(self.parents_half))
-        return self.run_in_parallel(parents_list, executor)
+        return new_population
     
     def changes(self, tupla):
             (p1, p2) = tupla
@@ -133,7 +139,8 @@ class GraphColoring:
             child = self.crossover(self.parents_half[p1], self.parents_half[p2])
             child = self.mutate(child)
 
-            return min([self.parents_half[p1], self.parents_half[p2], child], key=lambda x : x[0])
+            return child
+            # return min([self.parents_half[p1], self.parents_half[p2], child], key=lambda x : x[0])
     
     def run_in_parallel(self, parents, executor):
         # print(len(parents))
@@ -143,7 +150,11 @@ class GraphColoring:
         # for _ in new_pop:
         #     i += 1
         # print(i)
-        return np.fromiter(new_pop, dtype=object)
+        arr = np.zeros(self.size, dtype=object)
+        for i, item in enumerate(new_pop):
+            arr[i] = item
+        return arr
+        # return np.fromiter(new_pop, dtype=object)
     
     def run(self):
         population = self.generate_population()
@@ -154,13 +165,19 @@ class GraphColoring:
         print(best_individual)
         with ProcessPoolExecutor() as executor:
             while time.time() < self.time_to_run:
-                print("g")
+                # print("g")
                 g += 1
                 population = self.evolve(population, executor)
                 # print(population)
                 best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                                 key=lambda x: x[0])
-                print(best_individual)
+                data = []
+                for individual in population:
+                    data.append(individual[0])
+                
+                print("best: " + str(min(data)))
+                print(sorted(data))
+                # print([(individual[0], _) for individual in population])
 
         best_individual, _ = min([(individual[0], individual[1]) for individual in population],
                                             key=lambda x: x[0])
